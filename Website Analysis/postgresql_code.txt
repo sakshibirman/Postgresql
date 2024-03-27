@@ -1,0 +1,655 @@
+--TABLE CREATION
+
+CREATE TABLE artists (
+    artist_id SERIAL PRIMARY KEY,
+    artist_name VARCHAR(100)
+);
+
+CREATE TABLE albums (
+    album_id SERIAL PRIMARY KEY,
+    artist_id INT REFERENCES artists(artist_id),
+    album_title VARCHAR(200),
+    no_of_tracks INT,
+    release_date DATE
+);
+
+CREATE TABLE singles (
+    single_id SERIAL PRIMARY KEY,
+    artist_id INT REFERENCES artists(artist_id),
+    single_title VARCHAR(200),
+    no_of_tracks INT,
+    release_date DATE
+);
+
+CREATE TABLE album_tracks (
+    atrack_id SERIAL PRIMARY KEY,
+    album_id INT REFERENCES albums(album_id),
+    atrack_title VARCHAR(200),
+    duration INT,
+    plays INT
+);
+
+CREATE TABLE single_tracks (
+    strack_id SERIAL PRIMARY KEY,
+    single_id INT REFERENCES singles(single_id),
+    strack_title VARCHAR(200),
+    duration INT,
+    plays INT
+);
+
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50),
+    registration_date DATE,
+    active_subscriber boolean,
+	user_location VARCHAR(50)
+);
+
+CREATE TABLE playlists (
+    playlist_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(user_id),
+    playlist_name VARCHAR(100),
+    status  VARCHAR(10)
+);
+
+CREATE TABLE playlist_tracks (
+    playlist_track_id SERIAL PRIMARY KEY,
+    playlist_id INT REFERENCES playlists(playlist_id),
+    atrack_id INT REFERENCES album_tracks(atrack_id),
+    strack_id INT REFERENCES single_tracks(strack_id),
+    added_at TIMESTAMP
+);
+
+
+
+-- VALUE INSERTION
+
+INSERT INTO artists (artist_name)
+VALUES
+    ('Artist A'),
+    ('Artist B'),
+    ('Artist C'),
+    ('Artist D'),
+    ('Artist E');
+
+INSERT INTO albums (artist_id, album_title, release_date, no_of_tracks)
+SELECT
+    floor(random() * 5) + 1,
+    'Album ' || id,
+    '2023-01-01'::DATE + interval '1 month' * random(),
+    CASE
+        WHEN RANDOM() < 0.5 THEN floor(random() * 4) + 6
+        ELSE floor(random() * 5) + 6
+    END
+FROM generate_series(1, 100) AS id;
+
+
+
+INSERT INTO singles (artist_id, single_title, release_date, no_of_tracks)
+SELECT
+    floor(random() * 5) + 1,
+    'Single ' || id,
+    '2023-01-01'::DATE + interval '1 month' * random(),
+    ROUND(random() * 3) + 1
+FROM generate_series(1, 150) AS id;
+
+
+INSERT INTO album_tracks (album_id, atrack_title, duration, plays)
+SELECT
+    floor(random() * 100) + 1,
+    'Track ' || id, floor(random() * 300) + 120, floor(random() * 1000000)
+FROM generate_series(1, 1000) AS id;
+
+
+INSERT INTO single_tracks (single_id, strack_title, duration, plays)
+SELECT
+    floor(random() * 100) + 1,
+    'Track ' || id, floor(random() * 300) + 120, floor(random() * 1000000)
+FROM generate_series(1, 2000) AS id;
+
+
+INSERT INTO users (username, registration_date, active_subscriber, user_location)
+SELECT
+    'user' || id,
+    '2022-01-01'::DATE + interval '1 month' * random(),
+	RANDOM()::INT::BOOLEAN,
+    (ARRAY['USA', 'Canada', 'United Kingdom', 'Denmark', 'France', 'Australia', 'India', 'Italy', 'Spain'])[floor(random() * 9)+1]
+	FROM generate_series(1, 50) AS id;
+
+
+
+INSERT INTO playlists (user_id, playlist_name, status)
+SELECT
+    floor(random() * 50) + 1,
+    'Playlist ' || id,
+    CASE
+        WHEN RANDOM() < 0.5 THEN 'Public'
+        ELSE 'Private'
+    END
+FROM generate_series(1, 100) AS id;
+
+
+INSERT INTO playlist_tracks (playlist_id, atrack_id, strack_id, added_at)
+SELECT
+    floor(random() * 100) + 1,
+    CASE
+        WHEN random() < 0.5 THEN
+            floor(random() * 1000) + 1
+        ELSE
+            NULL
+    END AS atrack_id,
+    CASE
+        WHEN random() < 0.5 THEN
+            NULL
+        ELSE
+            floor(random() * 1000) + 1
+    END AS strack_id,
+    NOW() - interval '30 days' * random()
+FROM generate_series(1, 1000);
+
+
+--VIEW TABLES
+
+
+
+
+select * from artists;
+
+select * from playlists;
+
+select * from albums;
+
+select * from singles;
+
+select * from playlist_tracks;
+
+select * from album_tracks;
+
+select * from single_tracks;
+
+select * from users;
+
+
+
+
+--Table Joins
+
+-- Join artists and albums tables
+SELECT
+    a.artist_name,
+    al.album_title,
+    al.release_date
+FROM
+    artists a
+INNER JOIN albums al ON a.artist_id = al.artist_id;
+
+-- Join albums and album_tracks tables
+SELECT
+    al.album_title,
+    atrack.atrack_title,
+    atrack.duration
+FROM
+    albums al
+INNER JOIN album_tracks atrack ON al.album_id = atrack.album_id;
+
+-- Join singles and single_tracks tables
+SELECT
+    s.single_title,
+    strack.strack_title,
+    strack.duration
+FROM
+    singles s
+INNER JOIN single_tracks strack ON s.single_id = strack.single_id;
+
+-- Join playlists, playlist_tracks, and albums tables
+SELECT
+    al.album_title,
+    atrack.atrack_title,
+    atrack.duration
+FROM
+    albums al
+INNER JOIN album_tracks atrack ON al.album_id = atrack.album_id;
+
+
+-- Join playlists, playlist_tracks, and singles tables
+SELECT
+    s.single_title,
+    strack.strack_title,
+    strack.duration
+FROM
+    singles s
+INNER JOIN single_tracks strack ON s.single_id = strack.single_id;
+
+
+-- Join artists, albums, and playlists tables
+SELECT
+    a.artist_name,
+    al.album_title,
+    pl.playlist_name
+FROM
+    artists a
+INNER JOIN albums al ON a.artist_id = al.artist_id
+INNER JOIN playlists pl ON al.artist_id = pl.user_id;
+
+
+
+
+--QUERIES
+
+--artist based queries
+
+-- 1. find number of albums per artist
+SELECT
+    artist_id,
+    COUNT(album_id) AS num_albums
+FROM
+    albums
+GROUP BY
+    artist_id
+ORDER BY
+    num_albums DESC
+LIMIT 5;
+
+
+-- 2. find the artist with highest number of albums
+SELECT
+    artist_id,
+    COUNT(album_id) AS num_albums
+FROM
+    albums
+GROUP BY
+    artist_id
+ORDER BY
+    num_albums DESC
+LIMIT 1;
+
+
+-- 3. find the artist with highest number of singles
+SELECT
+    artist_id,
+    COUNT(single_id) AS num_singles
+FROM
+    singles
+GROUP BY
+    artist_id
+ORDER BY
+    num_singles DESC
+LIMIT 1;
+
+
+-- 4. find the album with maximum number of tracks
+SELECT
+    al.album_title,
+    COUNT(atrack.atrack_id) AS num_tracks
+FROM
+    albums al
+INNER JOIN album_tracks atrack ON al.album_id = atrack.album_id
+GROUP BY
+    al.album_id
+ORDER BY
+    num_tracks DESC
+LIMIT
+    1;
+
+-- 5. find the single with maximum number of tracks
+SELECT
+    si.single_title,
+    COUNT(strack.strack_id) AS num_tracks
+FROM
+    singles si
+INNER JOIN single_tracks strack ON si.single_id = strack.single_id
+GROUP BY
+    si.single_id
+ORDER BY
+    num_tracks DESC
+LIMIT
+    1;
+
+-- 6. find the average album duration
+
+SELECT
+    AVG(duration) AS avg_album_duration
+FROM album_tracks;
+
+
+-- 7. find the average single duration
+
+SELECT
+    AVG(duration) AS avg_single_duration
+FROM single_tracks;
+
+
+-- 8. find the average number of track plays
+
+
+SELECT
+    'Album' AS track_type,
+    AVG(plays) AS avg_plays
+FROM album_tracks
+UNION ALL
+SELECT
+    'Single' AS track_type,
+    AVG(plays) AS avg_plays
+FROM single_tracks;
+
+
+-- 9. find the album and singles count per artists
+
+SELECT
+    subquery.artist_name,
+    subquery.album_count,
+    subquery.single_count
+FROM (
+    SELECT
+        a.artist_name,
+        COUNT(al.album_id) AS album_count,
+        COUNT(si.single_id) AS single_count
+    FROM artists a
+    LEFT JOIN albums al ON a.artist_id = al.artist_id
+    LEFT JOIN singles si ON a.artist_id = si.artist_id
+    GROUP BY a.artist_name
+) subquery
+ORDER BY (subquery.album_count + subquery.single_count) DESC
+LIMIT 5;
+
+
+
+
+--user based queries
+
+
+-- 10. Users per country
+SELECT
+    user_location,
+    COUNT(DISTINCT user_id) AS num_users
+FROM
+    users
+GROUP BY
+    user_location
+ORDER BY
+    num_users DESC;
+
+
+-- 11. total playlists curated
+
+SELECT
+    u.username,
+    p.playlist_name,
+    COUNT(pt.playlist_track_id) AS track_count
+FROM users u
+JOIN playlists p ON u.user_id = p.user_id
+JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+GROUP BY u.username, p.playlist_name
+;
+
+-- 12. user engagement
+
+SELECT
+    registration_date,
+    COUNT(*) AS new_users
+FROM users
+GROUP BY registration_date
+ORDER BY registration_date;
+
+-- 13. find active vs inactive users
+
+SELECT
+    active_subscriber,
+    COUNT(*) AS user_count
+FROM users
+GROUP BY active_subscriber;
+
+-- 14. User Playlist Duration
+
+SELECT
+    u.username,
+    SUM(COALESCE(at.duration, st.duration)) AS total_playlist_duration
+FROM users u
+JOIN playlists p ON u.user_id = p.user_id
+LEFT JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+LEFT JOIN album_tracks at ON pt.atrack_id = at.atrack_id
+LEFT JOIN single_tracks st ON pt.strack_id = st.strack_id
+GROUP BY u.username
+ORDER BY total_playlist_duration DESC
+;
+
+
+-- 15. Number of public and private playlists
+
+SELECT
+    status,
+    COUNT(playlist_id) AS num_playlists
+FROM
+    playlists
+GROUP BY
+    status;
+
+
+-- 16. find Users with the Most Diverse Taste in Music (Most Unique Tracks Added to Playlists)
+SELECT
+    u.username,
+    COUNT(DISTINCT CASE WHEN pt.atrack_id IS NOT NULL THEN pt.atrack_id ELSE pt.strack_id END) AS unique_track_count
+FROM users u
+JOIN playlists p ON u.user_id = p.user_id
+JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+GROUP BY u.username
+ORDER BY unique_track_count DESC
+;
+
+
+-- 17. find the number of blank playlists
+
+SELECT
+    p.playlist_id,
+    p.playlist_name
+FROM playlists p
+LEFT JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+WHERE pt.strack_id IS NULL AND pt.atrack_id IS NULL;
+
+
+-- 18. find the user playlist diversity
+
+SELECT
+    u.username,
+    ROUND(AVG(COALESCE(at_distinct_count, st_distinct_count)), 2) AS avg_distinct_artists
+FROM users u
+LEFT JOIN (
+    SELECT p.user_id, COUNT(DISTINCT a.artist_id) AS at_distinct_count
+    FROM playlists p
+    JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+    JOIN album_tracks at ON pt.atrack_id = at.atrack_id
+    JOIN albums al ON at.album_id = al.album_id
+    JOIN artists a ON al.artist_id = a.artist_id
+    GROUP BY p.user_id
+) at_subquery ON u.user_id = at_subquery.user_id
+LEFT JOIN (
+    SELECT p.user_id, COUNT(DISTINCT a.artist_id) AS st_distinct_count
+    FROM playlists p
+    JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+    JOIN single_tracks st ON pt.strack_id = st.strack_id
+    JOIN singles si ON st.single_id = si.single_id
+    JOIN artists a ON si.artist_id = a.artist_id
+    GROUP BY p.user_id
+) st_subquery ON u.user_id = st_subquery.user_id
+GROUP BY u.username;
+
+
+-- 19. Identify Users with Playlists Containing Tracks from the Same Artist
+SELECT
+    u.username,
+    COUNT(DISTINCT a.artist_id) AS distinct_artist_count
+FROM users u
+JOIN playlists p ON u.user_id = p.user_id
+JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+LEFT JOIN album_tracks at ON pt.atrack_id = at.atrack_id
+LEFT JOIN albums al ON at.album_id = al.album_id
+LEFT JOIN artists a ON al.artist_id = a.artist_id
+LEFT JOIN single_tracks st ON pt.strack_id = st.strack_id
+LEFT JOIN singles si ON st.single_id = si.single_id
+WHERE a.artist_id IS NOT NULL
+GROUP BY u.username
+ORDER BY distinct_artist_count DESC;
+
+
+
+-- performance queries
+
+
+-- 20. find the Top 10 played tracks
+
+SELECT
+    t.atrack_id,
+    t.atrack_title,
+    t.plays
+FROM
+    (
+        SELECT
+            atrack.atrack_id,
+            atrack.atrack_title,
+            atrack.plays
+        FROM
+            album_tracks atrack
+        UNION ALL
+        SELECT
+            strack.strack_id,
+            strack.strack_title,
+            strack.plays
+        FROM
+            single_tracks strack
+    ) t
+ORDER BY
+    plays DESC
+LIMIT
+    10;
+
+
+-- 21. Preference Comparison between albums and singles
+
+SELECT
+    'Album' AS type,
+    SUM(plays) AS total_plays
+FROM album_tracks
+UNION ALL
+SELECT
+    'Single' AS type,
+    SUM(plays) AS total_plays
+FROM single_tracks;
+
+
+
+-- 22. top 5 playlists with most tracks
+
+SELECT
+    u.username,
+    p.playlist_name,
+    COUNT(pt.playlist_track_id) AS track_count
+FROM users u
+JOIN playlists p ON u.user_id = p.user_id
+JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+GROUP BY u.username, p.playlist_name
+ORDER BY track_count DESC
+LIMIT 5;
+
+
+
+-- 23. Top 10 Popular playlists
+
+SELECT
+    p.playlist_name,
+    COUNT(pt.playlist_track_id) AS track_count
+FROM playlists p
+JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+GROUP BY p.playlist_name
+ORDER BY track_count DESC
+LIMIT 10;
+
+
+
+-- 24. top 5 popular user location
+
+SELECT
+    user_location,
+    COUNT(*) AS user_count
+FROM users
+GROUP BY user_location
+ORDER BY user_count DESC
+LIMIT 5;
+
+
+-- 25. popular playlists among active users
+
+SELECT
+    p.playlist_name,
+    COUNT(pt.playlist_track_id) AS track_count
+FROM playlists p
+JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+JOIN users u ON p.user_id = u.user_id
+WHERE u.active_subscriber = true
+GROUP BY p.playlist_name
+ORDER BY track_count DESC
+LIMIT 5;
+
+
+
+-- 26. location wise active users
+
+SELECT
+    user_location,
+    COUNT(*) AS active_subscribers
+FROM users
+WHERE active_subscriber = true
+GROUP BY user_location
+ORDER BY active_subscribers DESC;
+
+
+-- 27. location wise most popular playlists
+
+SELECT
+    user_location,
+    playlist_name,
+    total_track_count
+FROM (
+    SELECT
+        u.user_location,
+        p.playlist_name,
+        COUNT(pt.playlist_track_id) AS total_track_count,
+        ROW_NUMBER() OVER (PARTITION BY u.user_location ORDER BY COUNT(pt.playlist_track_id) DESC) AS rank
+    FROM playlists p
+    JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+    JOIN users u ON p.user_id = u.user_id
+    GROUP BY u.user_location, p.playlist_name
+) ranked_playlists
+WHERE rank = 1
+ORDER BY user_location;
+
+-- 28. location wise most popular artists
+
+WITH RankedArtists AS (
+    SELECT
+        u.user_location,
+        a.artist_name,
+        SUM(COALESCE(at.plays, st.plays)) AS total_plays,
+        ROW_NUMBER() OVER (PARTITION BY u.user_location ORDER BY SUM(COALESCE(at.plays, st.plays)) DESC) AS rank
+    FROM users u
+    JOIN playlists p ON u.user_id = p.user_id
+    JOIN playlist_tracks pt ON p.playlist_id = pt.playlist_id
+    LEFT JOIN album_tracks at ON pt.atrack_id = at.atrack_id
+    LEFT JOIN albums al ON at.album_id = al.album_id
+    LEFT JOIN artists a ON al.artist_id = a.artist_id
+    LEFT JOIN single_tracks st ON pt.strack_id = st.strack_id
+    LEFT JOIN singles si ON st.single_id = si.single_id
+    WHERE a.artist_id IS NOT NULL
+    GROUP BY u.user_location, a.artist_name
+)
+SELECT user_location, artist_name, total_plays
+FROM RankedArtists
+WHERE rank = 1
+ORDER BY user_location;
+
+
+
+
+
+
+
+
